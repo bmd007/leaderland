@@ -27,6 +27,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 //	implementation 'org.springframework.cloud:spring-cloud-starter-zookeeper-#discovery'
 	implementation 'org.apache.zookeeper:zookeeper:3.5.6'
+	compile group: 'it.sauronsoftware.cron4j', name: 'cron4j', version: '2.2.5'
+	compile group: 'org.bouncycastle', name: 'bcprov-jdk16', version: '1.46'
+	compile('com.google.guava:guava:28.2-jre')
 
 	implementation 'org.springframework.kafka:spring-kafka'
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'

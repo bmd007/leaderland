@@ -1,3 +1,6 @@
 spring:
-  applicaiton:
+  application:
     name: leadership-seeker
+
+server:
+  port: 0
