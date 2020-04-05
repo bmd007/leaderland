@@ -6,7 +6,7 @@ plugins {
 
 group = 'leaderland'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '13'
+sourceCompatibility = '14'
 
 configurations {
 	compileOnly {
@@ -19,7 +19,7 @@ repositories {
 }
 
 ext {
-	set('springCloudVersion', "Hoxton.SR1")
+	set('springCloudVersion', "Hoxton.SR3")
 }
 
 dependencies {

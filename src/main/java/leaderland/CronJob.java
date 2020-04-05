@@ -3,7 +3,6 @@ package leaderland;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ser.std.JsonValueSerializer;
 import it.sauronsoftware.cron4j.Scheduler;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -12,11 +11,11 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
-import java.security.interfaces.RSAPublicKey;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -36,13 +35,15 @@ public class CronJob {
 
     private Runnable becomeCandidateForElection = () -> {
         try {
+            var random = Math.abs(new Random().nextInt()*100)%10000;
+
             var publicKey =  CryptographyUtil.publicKeyOf(CryptographyUtil.generateRSAKeyPair());
-            var nodeData = new NodeData(applicationName, new String(CryptographyUtil.publicKeyToPem(publicKey)));
+            var b64pem = Base64.getEncoder().encodeToString(CryptographyUtil.publicKeyToPem(publicKey));
+            var nodeData = new NodeData(applicationName+random, b64pem);
             var jsonNodeData = objectMapper.writeValueAsString(nodeData);
 
-            var random = Math.abs(new Random().nextInt()*100)%1000;
-            System.out.println("will wait:"+ random);
             Thread.sleep(random);
+            System.out.println("waited "+ random + " mss and now time is: "+ LocalTime.now());
 
             ACL acl = new ACL(ZooDefs.Perms.ALL, ZooDefs.Ids.ANYONE_ID_UNSAFE);
             byte[] bytes = jsonNodeData.getBytes();
@@ -50,7 +51,7 @@ public class CronJob {
             acls.add(acl);
 
             zooKeeper.create("/leader/election/", bytes, acls, CreateMode.EPHEMERAL_SEQUENTIAL, (rc, path, ctx, name) -> {
-                System.out.println("Path created:"+ path);
+                System.out.println("Path created:"+ path +" with name "+ name +" for application"+random);
             }, "CONTEXT 4");
 
         } catch (Exception e) {
@@ -64,7 +65,7 @@ public class CronJob {
                     .sorted((o1, o2) -> {
                         var int1 = Integer.valueOf(o1);
                         var int2 = Integer.valueOf(o2);
-                        return int1.compareTo(int2);
+                        return int2.compareTo(int1);
                     })
                     .collect(Collectors.toList());
             System.out.println(collect);
@@ -72,7 +73,12 @@ public class CronJob {
                 byte[] data = zooKeeper.getData(path +"/"+ collect.get(0), false, null);
                 var jsonNodeData = new String(data);
                 var nodeData = objectMapper.reader().forType(NodeData.class).readValue(jsonNodeData);
-                System.out.println(nodeData);
+                System.out.println(collect.get(0)+ " as [0] resulted in "+ nodeData);
+
+                byte[] data2 = zooKeeper.getData(path +"/"+ collect.get(collect.size()-1), false, null);
+                var jsonNodeData2 = new String(data2);
+                var nodeData2 = objectMapper.reader().forType(NodeData.class).readValue(jsonNodeData2);
+                System.out.println(collect.get(collect.size()-1)+ " as [last] resulted in "+ nodeData2);
             } catch (KeeperException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
@@ -89,9 +95,9 @@ public class CronJob {
     private Scheduler checkCandidatesScheduler = new Scheduler();
 
     public CronJob(){
-        registerSelfScheduler.schedule("52 12 * * *", becomeCandidateForElection);
+        registerSelfScheduler.schedule("55 21 * * *", becomeCandidateForElection);
         registerSelfScheduler.start();
-        checkCandidatesScheduler.schedule("53 12 * * *", checkCandidates);
+        checkCandidatesScheduler.schedule("57 21 * * *", checkCandidates);
         checkCandidatesScheduler.start();
     }
 }
